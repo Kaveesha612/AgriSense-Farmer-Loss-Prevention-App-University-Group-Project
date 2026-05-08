@@ -1,4 +1,10 @@
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -11,6 +17,238 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   bool isLogin = true;
   bool obscurePassword = true;
+  bool isLoading = false;
+  bool rememberMe = false;
+
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
+
+  String get baseUrl {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:5000'; // Android emulator
+    } else {
+      return 'http://localhost:5000'; // iOS simulator, web and desktop
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberMe();
+  }
+
+  Future<void> _loadRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    rememberMe = prefs.getBool('rememberMe') ?? false;
+    if (rememberMe) {
+      emailController.text = prefs.getString('savedEmail') ?? '';
+    }
+    setState(() {});
+  }
+
+  Future<void> _saveRememberMe(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('rememberMe', value);
+    if (value) {
+      await prefs.setString('savedEmail', emailController.text.trim());
+    } else {
+      await prefs.remove('savedEmail');
+    }
+  }
+
+  Future<void> _handleSuccessfulLogin({
+    required String userId,
+    required String userName,
+    required String token,
+    String? email,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', token);
+    await prefs.setString('userId', userId);
+    await prefs.setString('userName', userName);
+    if (email != null) {
+      await prefs.setString('userEmail', email);
+    }
+
+    if (rememberMe) {
+      await prefs.setBool('rememberMe', true);
+      if (email != null) {
+        await prefs.setString('savedEmail', email);
+      }
+    } else {
+      await prefs.remove('rememberMe');
+      await prefs.remove('savedEmail');
+    }
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => isLoading = true);
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        return;
+      }
+      final auth = await googleUser.authentication;
+      final token = auth.idToken ?? auth.accessToken ?? 'google:${googleUser.id}';
+      await _handleSuccessfulLogin(
+        userId: googleUser.id,
+        userName: googleUser.displayName ?? googleUser.email,
+        token: token,
+        email: googleUser.email,
+      );
+    } catch (e) {
+      _showErrorDialog('Google login failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithFacebook() async {
+    setState(() => isLoading = true);
+    try {
+      final result = await FacebookAuth.instance.login(
+        permissions: ['email', 'public_profile'],
+      );
+      if (result.status == LoginStatus.success) {
+        final userData = await FacebookAuth.instance.getUserData(
+          fields: 'name,email',
+        );
+        final token = result.accessToken?.toString() ?? 'facebook:${userData['id'] ?? ''}';
+        await _handleSuccessfulLogin(
+          userId: userData['id']?.toString() ?? '',
+          userName: userData['name']?.toString() ?? userData['email']?.toString() ?? 'Facebook User',
+          token: token,
+          email: userData['email']?.toString(),
+        );
+      } else if (result.status == LoginStatus.cancelled) {
+        _showErrorDialog('Facebook login was cancelled.');
+      } else {
+        _showErrorDialog('Facebook login failed. Please try again.');
+      }
+    } catch (e) {
+      _showErrorDialog('Facebook login failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> loginUser() async {
+    if (emailController.text.trim().isEmpty || passwordController.text.isEmpty) {
+      _showErrorDialog('Please fill in all fields');
+      return;
+    }
+
+    setState(() => isLoading = true);
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/login'), // Use dynamic base URL
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': emailController.text.trim(),
+          'password': passwordController.text,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (rememberMe) {
+          await _saveRememberMe(true);
+        }
+        await _handleSuccessfulLogin(
+          userId: data['_id'],
+          userName: data['name'],
+          token: data['token'],
+          email: data['email'],
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        _showErrorDialog(error['message'] ?? 'Login failed');
+      }
+    } catch (e) {
+      _showErrorDialog('Network error. Please check your connection.');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> registerUser() async {
+    if (nameController.text.trim().isEmpty ||
+        emailController.text.trim().isEmpty ||
+        phoneController.text.trim().isEmpty ||
+        passwordController.text.isEmpty) {
+      _showErrorDialog('Please fill in all fields');
+      return;
+    }
+
+    setState(() => isLoading = true);
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': nameController.text.trim(),
+          'email': emailController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'password': passwordController.text,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        if (rememberMe) {
+          await _saveRememberMe(true);
+        }
+        await _handleSuccessfulLogin(
+          userId: data['_id'],
+          userName: data['name'],
+          token: data['token'],
+          email: data['email'],
+        );
+      } else {
+        final error = jsonDecode(response.body);
+        _showErrorDialog(error['message'] ?? 'Registration failed');
+      }
+    } catch (e) {
+      _showErrorDialog('Network error. Please check your connection.');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    nameController.dispose();
+    phoneController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -174,17 +412,46 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     const SizedBox(height: 30),
 
+                    if (!isLogin) ...[
+                      const Text(
+                        "Full Name",
+                        style: TextStyle(color: Colors.grey, fontFamily: 'Inter'),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTextField(
+                        "Enter your full name",
+                        Icons.person_outline,
+                        controller: nameController,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+
                     const Text(
                       "Email",
                       style: TextStyle(color: Colors.grey, fontFamily: 'Inter'),
                     ),
                     const SizedBox(height: 8),
                     _buildTextField(
-                      "eshannethmina@gmail.com",
+                      "Enter your email",
                       Icons.email_outlined,
+                      controller: emailController,
                     ),
 
                     const SizedBox(height: 20),
+
+                    if (!isLogin) ...[
+                      const Text(
+                        "Phone",
+                        style: TextStyle(color: Colors.grey, fontFamily: 'Inter'),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildTextField(
+                        "Enter your phone number",
+                        Icons.phone_outlined,
+                        controller: phoneController,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
 
                     const Text(
                       "Password",
@@ -192,8 +459,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     const SizedBox(height: 8),
                     _buildTextField(
-                      "*******",
+                      "Enter your password",
                       Icons.lock_outline,
+                      controller: passwordController,
                       isPassword: true,
                     ),
 
@@ -208,8 +476,12 @@ class _AuthScreenState extends State<AuthScreen> {
                               height: 24,
                               width: 24,
                               child: Checkbox(
-                                value: false,
-                                onChanged: (val) {},
+                                value: rememberMe,
+                                onChanged: (val) {
+                                  final newValue = val ?? false;
+                                  setState(() => rememberMe = newValue);
+                                  _saveRememberMe(newValue);
+                                },
                                 side: const BorderSide(color: Colors.grey),
                               ),
                             ),
@@ -247,14 +519,15 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HomeScreen(),
-                            ),
-                          );
-                        },
+                        onPressed: isLoading
+                            ? null
+                            : () {
+                                if (isLogin) {
+                                  loginUser();
+                                } else {
+                                  registerUser();
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
@@ -262,13 +535,22 @@ class _AuthScreenState extends State<AuthScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: Text(
-                          isLogin ? "Log In" : "Sign Up",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                isLogin ? "Log In" : "Sign Up",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
                       ),
                     ),
 
@@ -293,11 +575,13 @@ class _AuthScreenState extends State<AuthScreen> {
                     _buildSocialButton(
                       "Continue with Google",
                       "assets/images/google.png",
+                      _signInWithGoogle,
                     ),
                     const SizedBox(height: 15),
                     _buildSocialButton(
                       "Continue with Facebook",
                       "assets/images/facebook.png",
+                      _signInWithFacebook,
                     ),
                     const SizedBox(height: 30),
                   ],
@@ -316,8 +600,10 @@ class _AuthScreenState extends State<AuthScreen> {
     String hint,
     IconData icon, {
     bool isPassword = false,
+    TextEditingController? controller,
   }) {
     return TextField(
+      controller: controller,
       obscureText: isPassword ? obscurePassword : false,
       style: const TextStyle(color: Colors.black, fontSize: 14),
       decoration: InputDecoration(
@@ -348,7 +634,11 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildSocialButton(String label, String assetPath) {
+  Widget _buildSocialButton(
+    String label,
+    String assetPath,
+    VoidCallback onPressed,
+  ) {
     return Container(
       width: double.infinity,
       height: 55,
@@ -357,7 +647,7 @@ class _AuthScreenState extends State<AuthScreen> {
         border: Border.all(color: Colors.black12),
       ),
       child: OutlinedButton(
-        onPressed: () {},
+        onPressed: isLoading ? null : onPressed,
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

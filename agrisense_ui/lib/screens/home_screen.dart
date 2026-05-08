@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/weather_service.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
 import 'weather_screen.dart';
@@ -13,58 +14,126 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  List<WeatherData> _weatherForecast = [];
+  bool _isWeatherLoading = false;
+  String? _weatherError;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWeatherData();
+  }
+
+  Future<void> _fetchWeatherData() async {
+    setState(() {
+      _isWeatherLoading = true;
+      _weatherError = null;
+    });
+
+    try {
+      // Default location: Colombo, Sri Lanka (adjust as needed)
+      final forecast = await WeatherService.getWeatherForecast(6.9271, 80.7789);
+      setState(() {
+        _weatherForecast = forecast;
+        _isWeatherLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _weatherError = 'Unable to load weather';
+        _isWeatherLoading = false;
+      });
+    }
+  }
+
+  void _goHome() {
+    setState(() {
+      _selectedIndex = 0;
+    });
+  }
+
+  IconData _getWeatherIcon(String condition) {
+    final description = WeatherService.getWeatherIconDescription(condition);
+    switch (description) {
+      case 'cloud':
+        return Icons.cloud_outlined;
+      case 'rain':
+        return Icons.water_drop_outlined;
+      case 'storm':
+        return Icons.thunderstorm_outlined;
+      case 'snow':
+        return Icons.cloudy_snowing;
+      case 'sunny':
+        return Icons.wb_sunny_outlined;
+      case 'wind':
+        return Icons.air_outlined;
+      default:
+        return Icons.cloud_outlined;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // The Stack keeps the Nav Bar floating ON TOP of whatever screen is currently active
-      body: Stack(
+    return WillPopScope(
+      onWillPop: () async {
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        // The Stack keeps the Nav Bar floating ON TOP of whatever screen is currently active
+        body: Stack(
         children: [
           // 1. The Active Screen Manager (The Deck of Cards)
           IndexedStack(
             index: _selectedIndex,
             children: [
               _buildDashboardView(), // Index 0: Home
-              const ChatbotScreen(), // Index 1: Chatbot
-              const WeatherScreen(), // Index 2: Weather
+              ChatbotScreen(onBack: _goHome), // Index 1: Chatbot
+              WeatherScreen(onBack: _goHome), // Index 2: Weather
               const ProfileScreen(), // Index 3: Profile
               const SettingsScreen(), // Index 4: Settings
             ],
           ),
 
           // 2. Floating Bottom Navigation Bar (Fixed in place over everything)
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 24, right: 24, bottom: 30),
-              child: Container(
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(40),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildNavItem(Icons.home_outlined, 0),
-                    _buildNavItem(Icons.chat_bubble_outline, 1),
-                    _buildNavItem(Icons.cloud_outlined, 2),
-                    _buildNavItem(Icons.person_outline, 3),
-                    _buildNavItem(Icons.settings_outlined, 4),
-                  ],
+          if (_selectedIndex != 2)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 24, right: 24, bottom: 30),
+                child: Container(
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(40),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildNavItem(Icons.home_outlined, 0),
+                      _buildNavItem(Icons.chat_bubble_outline, 1),
+                      _buildNavItem(Icons.cloud_outlined, 2),
+                      _buildNavItem(Icons.person_outline, 3),
+                      _buildNavItem(Icons.settings_outlined, 4),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
+    ),
     );
   }
 
@@ -163,41 +232,26 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 30),
 
                         // Weather Cards Row
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildWeatherCard(
-                                "SUN",
-                                Icons.cloud_outlined,
-                                "16°",
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildWeatherCard(
-                                "MON",
-                                Icons.water_drop_outlined,
-                                "17°",
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildWeatherCard(
-                                "THU",
-                                Icons.thunderstorm_outlined,
-                                "18°",
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildWeatherCard(
-                                "WED",
-                                Icons.cloudy_snowing,
-                                "19°",
-                              ),
-                            ),
-                          ],
-                        ),
+                        _isWeatherLoading
+                            ? const Center(
+                                child: SizedBox(
+                                  height: 80,
+                                  child: CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                ),
+                              )
+                            : _weatherError != null
+                                ? Center(
+                                    child: Text(
+                                      _weatherError!,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  )
+                                : _buildWeatherCardsRow(),
 
                         const SizedBox(height: 30),
 
@@ -346,6 +400,32 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --- HELPER WIDGETS ---
+
+  Widget _buildWeatherCardsRow() {
+    if (_weatherForecast.isEmpty) {
+      return const Center(
+        child: Text(
+          'No weather data available',
+          style: TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        for (int i = 0; i < _weatherForecast.length; i++) ...[
+          Expanded(
+            child: _buildWeatherCard(
+              _weatherForecast[i].day,
+              _getWeatherIcon(_weatherForecast[i].condition),
+              '${_weatherForecast[i].temp.toStringAsFixed(0)}°',
+            ),
+          ),
+          if (i < _weatherForecast.length - 1) const SizedBox(width: 8),
+        ],
+      ],
+    );
+  }
 
   Widget _buildWeatherCard(String day, IconData icon, String temp) {
     return GestureDetector(

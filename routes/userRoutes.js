@@ -1,6 +1,9 @@
 import express from 'express';
 import {
+  getUserProfile,
   updateUserProfile,
+  updateUserPassword,
+  deleteUserProfile,
   getAllUsers,
   getUserById,
   updateUserRole,
@@ -13,7 +16,12 @@ import { authorize } from '../middleware/roleMiddleware.js';
 const router = express.Router();
 
 router.route('/profile')
-  .put(protect, updateUserProfile);
+  .get(protect, getUserProfile)
+  .put(protect, updateUserProfile)
+  .delete(protect, deleteUserProfile);
+
+router.route('/profile/password')
+  .put(protect, updateUserPassword);
 
 router.route('/')
   .get(protect, authorize('Admin'), getAllUsers);
