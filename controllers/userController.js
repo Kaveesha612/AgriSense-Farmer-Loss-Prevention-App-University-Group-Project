@@ -1,6 +1,19 @@
 import asyncHandler from 'express-async-handler';
 import User from '../models/User.js';
 
+// @desc    Get user profile
+// @route   GET /api/users/profile
+// @access  Private (All roles)
+export const getUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select('-password');
+  if (user) {
+    res.json(user);
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
 // @desc    Update user profile (including farm locations)
 // @route   PUT /api/users/profile
 // @access  Private (All roles)
@@ -11,6 +24,8 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     user.phone = req.body.phone || user.phone;
     user.preferredLanguage = req.body.preferredLanguage || user.preferredLanguage;
     user.notificationsEnabled = req.body.notificationsEnabled ?? user.notificationsEnabled;
+    user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
+    user.gender = req.body.gender || user.gender;
 
     if (req.body.farmLocations) {
       user.farmLocations = req.body.farmLocations;
@@ -30,7 +45,50 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       farmLocations: updatedUser.farmLocations,
       preferredLanguage: updatedUser.preferredLanguage,
       notificationsEnabled: updatedUser.notificationsEnabled,
+      bio: updatedUser.bio,
+      gender: updatedUser.gender,
     });
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
+// @desc    Update user password
+// @route   PUT /api/users/profile/password
+// @access  Private (All roles)
+export const updateUserPassword = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (user) {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      res.status(400);
+      throw new Error('Current password and new password are required');
+    }
+
+    const passwordMatch = await user.matchPassword(currentPassword);
+    if (!passwordMatch) {
+      res.status(401);
+      throw new Error('Current password is incorrect');
+    }
+
+    user.password = newPassword;
+    await user.save();
+    res.json({ message: 'Password updated successfully' });
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
+// @desc    Delete own profile
+// @route   DELETE /api/users/profile
+// @access  Private (All roles)
+export const deleteUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (user) {
+    await user.deleteOne();
+    res.json({ message: 'Account deleted successfully' });
   } else {
     res.status(404);
     throw new Error('User not found');

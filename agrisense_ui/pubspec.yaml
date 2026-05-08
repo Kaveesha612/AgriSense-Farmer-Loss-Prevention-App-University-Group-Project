@@ -10,6 +10,10 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  http: ^1.6.0
+  shared_preferences: ^2.2.3
+  google_sign_in: ^6.1.0
+  flutter_facebook_auth: ^7.1.6
 
 dev_dependencies:
   flutter_test:

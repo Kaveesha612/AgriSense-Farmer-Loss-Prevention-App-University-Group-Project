@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class ChatbotScreen extends StatelessWidget {
-  const ChatbotScreen({super.key});
+  final VoidCallback? onBack;
+
+  const ChatbotScreen({super.key, this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +21,7 @@ class ChatbotScreen extends StatelessWidget {
                   color: Colors.white,
                   size: 28,
                 ),
-                onPressed: () => Navigator.pop(context),
+                onPressed: onBack ?? () => Navigator.of(context).maybePop(),
               ),
             ),
             const Expanded(

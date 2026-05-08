@@ -25,6 +25,12 @@ const userSchema = mongoose.Schema(
     farmLocations: [farmLocationSchema],
     preferredLanguage: { type: String, default: 'en' },
     notificationsEnabled: { type: Boolean, default: true },
+    bio: { type: String, default: '' },
+    gender: {
+      type: String,
+      enum: ['Male', 'Female', 'Other'],
+      default: 'Male',
+    },
   },
   { timestamps: true }
 );
