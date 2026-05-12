@@ -1,7 +1,11 @@
 import asyncHandler from 'express-async-handler';
 
-const API_KEY = 'b6fd43532d8c40f6a072c8232313641a';
+const API_KEY = process.env.OPENWEATHER_API_KEY;
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
+
+if (!API_KEY) {
+  throw new Error('OPENWEATHER_API_KEY is not configured in environment variables');
+}
 
 // @desc    Get current weather by coordinates
 // @route   GET /api/weather/current?lat=...&lon=...

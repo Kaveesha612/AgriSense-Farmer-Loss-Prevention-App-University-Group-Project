@@ -100,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           // 2. Floating Bottom Navigation Bar (Fixed in place over everything)
-          if (_selectedIndex != 2)
+          if (_selectedIndex != 1 && _selectedIndex != 2)
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
