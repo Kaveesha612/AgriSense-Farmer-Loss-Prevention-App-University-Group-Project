@@ -1,5 +1,5 @@
 import express from 'express';
-import dotenv from 'dotenv';
+import './config/env.js';
 import cors from 'cors';
 import morgan from 'morgan';
 import connectDB from './config/db.js';
@@ -13,8 +13,6 @@ import chatbotRoutes from './routes/chatbotRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 
 dns.setServers(['1.1.1.1', '8.8.8.8']);
-
-dotenv.config();
 connectDB();
 
 const app = express();

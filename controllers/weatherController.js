@@ -1,11 +1,14 @@
 import asyncHandler from 'express-async-handler';
 
-const API_KEY = process.env.OPENWEATHER_API_KEY;
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
-if (!API_KEY) {
-  throw new Error('OPENWEATHER_API_KEY is not configured in environment variables');
-}
+const getOpenWeatherApiKey = () => {
+  const apiKey = process.env.OPENWEATHER_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENWEATHER_API_KEY is not configured in environment variables');
+  }
+  return apiKey;
+};
 
 // @desc    Get current weather by coordinates
 // @route   GET /api/weather/current?lat=...&lon=...
@@ -17,7 +20,8 @@ export const getWeather = asyncHandler(async (req, res) => {
     throw new Error('Latitude and longitude are required');
   }
 
-  const url = `${BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`;
+  const apiKey = getOpenWeatherApiKey();
+  const url = `${BASE_URL}/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
 
   const response = await fetch(url);
   const data = await response.json();
@@ -37,7 +41,8 @@ export const getGeocode = asyncHandler(async (req, res) => {
     throw new Error('City is required');
   }
 
-  const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${API_KEY}`;
+  const apiKey = getOpenWeatherApiKey();
+  const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${apiKey}`;
   const response = await fetch(url);
   const data = await response.json();
 
@@ -66,7 +71,8 @@ export const getWeatherForecast = asyncHandler(async (req, res) => {
     throw new Error('Latitude and longitude are required');
   }
 
-  const url = `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&cnt=40`;
+  const apiKey = getOpenWeatherApiKey();
+  const url = `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&cnt=40`;
 
   const response = await fetch(url);
   const data = await response.json();
