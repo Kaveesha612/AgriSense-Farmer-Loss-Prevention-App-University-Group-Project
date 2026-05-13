@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/chat_message.dart';
 import '../services/chat_service.dart';
 
@@ -167,15 +168,39 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             ),
           ],
         ),
-        child: Text(
-          message.text,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 15,
-            height: 1.45,
-            fontFamily: 'Inter',
-          ),
-        ),
+        child: message.isUser
+            ? Text(
+                message.text,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 15,
+                  height: 1.45,
+                  fontFamily: 'Inter',
+                ),
+              )
+            : MarkdownBody(
+                data: message.text,
+                selectable: false,
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                  p: TextStyle(
+                    color: textColor,
+                    fontSize: 15,
+                    height: 1.45,
+                    fontFamily: 'Inter',
+                  ),
+                  strong: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Inter',
+                  ),
+                  em: TextStyle(
+                    color: textColor,
+                    fontStyle: FontStyle.italic,
+                    fontFamily: 'Inter',
+                  ),
+                  blockSpacing: 8,
+                ),
+              ),
       ),
     );
   }
