@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/weather_service.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
@@ -17,11 +18,29 @@ class _HomeScreenState extends State<HomeScreen> {
   List<WeatherData> _weatherForecast = [];
   bool _isWeatherLoading = false;
   String? _weatherError;
+  String _firstName = 'User';
 
   @override
   void initState() {
     super.initState();
+    _fetchUserName();
     _fetchWeatherData();
+  }
+
+  Future<void> _fetchUserName() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final fullName = prefs.getString('userName') ?? 'User';
+      // Extract first name (before space if exists)
+      final firstName = fullName.split(' ').first;
+      setState(() {
+        _firstName = firstName;
+      });
+    } catch (e) {
+      setState(() {
+        _firstName = 'User';
+      });
+    }
   }
 
   Future<void> _fetchWeatherData() async {
@@ -210,9 +229,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Greeting
-                        const Text(
-                          'Hi Eshan,',
-                          style: TextStyle(
+                        Text(
+                          'Hi $_firstName,',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -326,62 +345,70 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 20),
 
                         // Your AI Insights Section
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFFE8F5E9), Color(0xFFA5D6A7)],
+                        GestureDetector(
+                          onTap: () {
+                            // Switch to Chatbot Tab programmatically
+                            setState(() {
+                              _selectedIndex = 1;
+                            });
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFFE8F5E9), Color(0xFFA5D6A7)],
+                              ),
                             ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Your AI Insights",
-                                style: TextStyle(
-                                  color: Color(0xFF081C15),
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Inter',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Your AI Insights",
+                                  style: TextStyle(
+                                    color: Color(0xFF081C15),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Inter',
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                "Revisit past diagnoses and field recommendations",
-                                style: TextStyle(
-                                  color: Color(0xFF081C15),
-                                  fontSize: 12,
-                                  fontFamily: 'Inter',
+                                const SizedBox(height: 4),
+                                const Text(
+                                  "Revisit past diagnoses and field recommendations",
+                                  style: TextStyle(
+                                    color: Color(0xFF081C15),
+                                    fontSize: 12,
+                                    fontFamily: 'Inter',
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
+                                const SizedBox(height: 16),
 
-                              ListView(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                padding: EdgeInsets.zero,
-                                children: [
-                                  _buildInsightTile(
-                                    "yellow leaves on rice plants",
-                                    "Usually indicates nitrogen deficiency or overwatering...",
-                                  ),
-                                  const SizedBox(height: 10),
-                                  _buildInsightTile(
-                                    "rice blast fungus signs in seedlings",
-                                    "White or gray lesions with dark borders on leaves. Controlled with ...",
-                                  ),
-                                  const SizedBox(height: 10),
-                                  _buildInsightTile(
-                                    "white streaks on rice leaves disease",
-                                    "Could be rice tungro virus. Managed by controlling vector insects...",
-                                  ),
-                                ],
-                              ),
-                            ],
+                                ListView(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  padding: EdgeInsets.zero,
+                                  children: [
+                                    _buildInsightTile(
+                                      "yellow leaves on rice plants",
+                                      "Usually indicates nitrogen deficiency or overwatering...",
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _buildInsightTile(
+                                      "rice blast fungus signs in seedlings",
+                                      "White or gray lesions with dark borders on leaves. Controlled with ...",
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _buildInsightTile(
+                                      "white streaks on rice leaves disease",
+                                      "Could be rice tungro virus. Managed by controlling vector insects...",
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
 
