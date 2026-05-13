@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WeatherData {
   final String day;
@@ -51,17 +52,29 @@ class WeatherService {
     return 'http://localhost:5000/api/weather';
   }
 
+  static Future<Map<String, String>> _getHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  static const Duration _timeoutDuration = Duration(seconds: 45);
+
   static Future<List<WeatherData>> getWeatherForecast(
       double latitude, double longitude) async {
     try {
       final url = Uri.parse(
         '$_baseUrl/forecast?lat=$latitude&lon=$longitude',
       );
+      final headers = await _getHeaders();
 
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
+      final response = await http.get(url, headers: headers).timeout(
+        _timeoutDuration,
         onTimeout: () {
-          throw Exception('Weather API request timeout');
+          throw Exception('Weather API request timeout - please check your internet connection');
         },
       );
 
@@ -97,10 +110,11 @@ class WeatherService {
       double latitude, double longitude) async {
     try {
       final url = Uri.parse('$_baseUrl/forecast?lat=$latitude&lon=$longitude');
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
+      final headers = await _getHeaders();
+      final response = await http.get(url, headers: headers).timeout(
+        _timeoutDuration,
         onTimeout: () {
-          throw Exception('Weather API request timeout');
+          throw Exception('Weather API request timeout - please check your internet connection');
         },
       );
 
@@ -138,11 +152,12 @@ class WeatherService {
       final url = Uri.parse(
         '$_baseUrl/current?lat=$latitude&lon=$longitude',
       );
+      final headers = await _getHeaders();
 
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
+      final response = await http.get(url, headers: headers).timeout(
+        _timeoutDuration,
         onTimeout: () {
-          throw Exception('Weather API request timeout');
+          throw Exception('Weather API request timeout - please check your internet connection');
         },
       );
 
@@ -160,10 +175,11 @@ class WeatherService {
   static Future<Map<String, dynamic>> getLocationCoordinates(String city) async {
     try {
       final url = Uri.parse('$_baseUrl/geocode?city=${Uri.encodeComponent(city)}');
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
+      final headers = await _getHeaders();
+      final response = await http.get(url, headers: headers).timeout(
+        _timeoutDuration,
         onTimeout: () {
-          throw Exception('Geocoding request timeout');
+          throw Exception('Geocoding request timeout - please check your internet connection');
         },
       );
 

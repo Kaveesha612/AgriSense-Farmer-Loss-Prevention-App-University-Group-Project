@@ -17,12 +17,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
   late Future<List<WeatherData>> _forecastFuture;
   final TextEditingController _fieldSizeController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
-  final List<String> _riceVarieties = [
-    'Basmathi',
-    'Swarna',
-    'Kolam',
-    'Nadu',
-  ];
+  final List<String> _riceVarieties = ['Basmathi', 'Swarna', 'Kolam', 'Nadu'];
   String _riceType = 'Basmathi';
   String _recommendation = '';
   String _recommendationError = '';
@@ -46,8 +41,14 @@ class _WeatherScreenState extends State<WeatherScreen> {
   }
 
   void _loadWeather() {
-    _currentWeatherFuture = WeatherService.getCurrentWeather(_latitude, _longitude);
-    _hourlyForecastFuture = WeatherService.getHourlyForecast(_latitude, _longitude);
+    _currentWeatherFuture = WeatherService.getCurrentWeather(
+      _latitude,
+      _longitude,
+    );
+    _hourlyForecastFuture = WeatherService.getHourlyForecast(
+      _latitude,
+      _longitude,
+    );
     _forecastFuture = WeatherService.getWeatherForecast(_latitude, _longitude);
   }
 
@@ -79,9 +80,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
           title: const Text('Change location'),
           content: TextField(
             controller: _locationController,
-            decoration: const InputDecoration(
-              hintText: 'Enter city name',
-            ),
+            decoration: const InputDecoration(hintText: 'Enter city name'),
           ),
           actions: [
             TextButton(
@@ -99,7 +98,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
       },
     );
 
-    if (newLocation != null && newLocation.isNotEmpty && newLocation != _locationLabel) {
+    if (newLocation != null &&
+        newLocation.isNotEmpty &&
+        newLocation != _locationLabel) {
       await _updateLocation(newLocation);
     }
   }
@@ -114,7 +115,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
       setState(() {
         _latitude = coords['lat'];
         _longitude = coords['lon'];
-        final state = coords['state'] != null && coords['state'].isNotEmpty ? ', ${coords['state']}' : '';
+        final state = coords['state'] != null && coords['state'].isNotEmpty
+            ? ', ${coords['state']}'
+            : '';
         _locationLabel = '${coords['name']}$state, ${coords['country']}';
       });
       _loadWeather();
@@ -123,9 +126,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
         _locationLabel = location;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Unable to update location: ${e.toString()}'),
-        ),
+        SnackBar(content: Text('Unable to update location: ${e.toString()}')),
       );
     }
   }
@@ -139,11 +140,15 @@ class _WeatherScreenState extends State<WeatherScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 18.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 18.0,
+              ),
               child: Row(
                 children: [
                   InkWell(
-                    onTap: widget.onBack ?? () => Navigator.of(context).maybePop(),
+                    onTap:
+                        widget.onBack ?? () => Navigator.of(context).maybePop(),
                     borderRadius: BorderRadius.circular(16),
                     child: const Padding(
                       padding: EdgeInsets.all(10),
@@ -197,7 +202,8 @@ class _WeatherScreenState extends State<WeatherScreen> {
                     FutureBuilder<WeatherData>(
                       future: _currentWeatherFuture,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return Container(
                             margin: const EdgeInsets.only(top: 12),
                             height: 260,
@@ -232,9 +238,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                             child: Center(
                               child: Text(
                                 'Error loading weather',
-                                style: const TextStyle(
-                                  color: Colors.white60,
-                                ),
+                                style: const TextStyle(color: Colors.white60),
                               ),
                             ),
                           );
@@ -253,7 +257,10 @@ class _WeatherScreenState extends State<WeatherScreen> {
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFF8DCF9D), Color(0xFF1B5D37)],
+                                  colors: [
+                                    Color(0xFF8DCF9D),
+                                    Color(0xFF1B5D37),
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
@@ -275,7 +282,8 @@ class _WeatherScreenState extends State<WeatherScreen> {
                                     children: [
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               weather.condition,
@@ -322,17 +330,22 @@ class _WeatherScreenState extends State<WeatherScreen> {
                             const SizedBox(height: 20),
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 18,
+                                horizontal: 16,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFE6F6E8),
                                 borderRadius: BorderRadius.circular(28),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   _buildSmallStat(
                                     icon: Icons.wind_power,
-                                    value: '${weather.windSpeed.toStringAsFixed(1)} m/s',
+                                    value:
+                                        '${weather.windSpeed.toStringAsFixed(1)} m/s',
                                     label: 'Wind',
                                   ),
                                   _buildSmallStat(
@@ -342,7 +355,8 @@ class _WeatherScreenState extends State<WeatherScreen> {
                                   ),
                                   _buildSmallStat(
                                     icon: Icons.cloudy_snowing,
-                                    value: '${weather.precipitation?.toStringAsFixed(1) ?? '0.0'} mm',
+                                    value:
+                                        '${weather.precipitation?.toStringAsFixed(1) ?? '0.0'} mm',
                                     label: 'Rain',
                                   ),
                                 ],
@@ -407,16 +421,18 @@ class _WeatherScreenState extends State<WeatherScreen> {
                             color: Color(0xFF2D4A36),
                           ),
                           items: _riceVarieties
-                              .map((type) => DropdownMenuItem(
-                                    value: type,
-                                    child: Text(
-                                      type,
-                                      style: const TextStyle(
-                                        color: Color(0xFF2D4A36),
-                                        fontFamily: 'Inter',
-                                      ),
+                              .map(
+                                (type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(
+                                    type,
+                                    style: const TextStyle(
+                                      color: Color(0xFF2D4A36),
+                                      fontFamily: 'Inter',
                                     ),
-                                  ))
+                                  ),
+                                ),
+                              )
                               .toList(),
                           onChanged: (value) {
                             if (value != null) {
@@ -517,9 +533,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
           return SizedBox(
             height: 130,
             child: Center(
-              child: CircularProgressIndicator(
-                color: const Color(0xFF2A5A33),
-              ),
+              child: CircularProgressIndicator(color: const Color(0xFF2A5A33)),
             ),
           );
         }
@@ -650,7 +664,9 @@ class _WeatherScreenState extends State<WeatherScreen> {
                 backgroundColor: const Color(0xFF66C780),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              onPressed: _isLoadingRecommendation ? null : _handleGenerateRecommendation,
+              onPressed: _isLoadingRecommendation
+                  ? null
+                  : _handleGenerateRecommendation,
               child: _isLoadingRecommendation
                   ? const SizedBox(
                       height: 16,
@@ -661,7 +677,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                       ),
                     )
                   : const Text(
-                      'Get tailored recommendation',
+                      'Get recommendation',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 14,
@@ -671,12 +687,17 @@ class _WeatherScreenState extends State<WeatherScreen> {
                     ),
             ),
           ),
-          if (_recommendation.isNotEmpty || _recommendationError.isNotEmpty) ...[
+          if (_recommendation.isNotEmpty ||
+              _recommendationError.isNotEmpty) ...[
             const SizedBox(height: 18),
             Text(
-              _recommendationError.isNotEmpty ? _recommendationError : _recommendation,
+              _recommendationError.isNotEmpty
+                  ? _recommendationError
+                  : _recommendation,
               style: TextStyle(
-                color: _recommendationError.isNotEmpty ? Colors.red[200] : Colors.white70,
+                color: _recommendationError.isNotEmpty
+                    ? Colors.red[200]
+                    : Colors.white70,
                 fontSize: 12,
                 height: 1.6,
                 fontFamily: 'Inter',
@@ -692,7 +713,8 @@ class _WeatherScreenState extends State<WeatherScreen> {
     final fieldSize = _fieldSizeController.text.trim();
     if (fieldSize.isEmpty) {
       setState(() {
-        _recommendationError = 'Enter the field size to receive a planting recommendation.';
+        _recommendationError =
+            'Enter the field size to receive a planting recommendation.';
         _recommendation = '';
       });
       return;
@@ -708,17 +730,19 @@ class _WeatherScreenState extends State<WeatherScreen> {
       final currentWeather = await _currentWeatherFuture;
       final weatherSummary =
           '${currentWeather.condition}, ${currentWeather.temp.toStringAsFixed(1)}°C, humidity ${currentWeather.humidity}%, wind ${currentWeather.windSpeed.toStringAsFixed(1)} m/s.';
-      final recommendation = await PlantingService.getPlantingWindowRecommendation(
-        riceType: _riceType,
-        fieldSize: fieldSize,
-        weatherSummary: weatherSummary,
-      );
+      final recommendation =
+          await PlantingService.getPlantingWindowRecommendation(
+            riceType: _riceType,
+            fieldSize: fieldSize,
+            weatherSummary: weatherSummary,
+          );
       setState(() {
         _recommendation = recommendation;
       });
     } catch (_) {
       setState(() {
-        _recommendationError = 'Unable to fetch recommendation right now. Please try again.';
+        _recommendationError =
+            'Unable to fetch recommendation right now. Please try again.';
       });
     } finally {
       setState(() {
